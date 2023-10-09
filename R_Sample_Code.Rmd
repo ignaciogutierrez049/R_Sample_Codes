@@ -6,7 +6,7 @@ date: "2023-09-22"
 
 ## Summary
 
-In this sample code, I clean and wrangle two panel datasets from the International Coffee Organization.   return The datasets in question consist of the domestic consumption and domestic exports of coffee for several countries in the Global South between 1990 and 2018.  
+In this sample code, I clean and wrangle two panel datasets from the International Coffee Organization. The datasets in question consist of the domestic consumption and domestic exports of coffee for several countries in the Global South between 1990 and 2018.  
 
 ```{r, echo=FALSE}
 # Load necessary libraries
