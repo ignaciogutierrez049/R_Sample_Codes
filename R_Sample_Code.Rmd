@@ -6,7 +6,9 @@ date: "2023-09-22"
 
 ## Summary
 
-In this sample code, I clean and wrangle two panel datasets from the International Coffee Organization. The datasets in question consist of the domestic consumption and domestic exports of coffee for several countries in the Global South between 1990 and 2018.
+In this sample code, I clean and wrangle two panel datasets from the International Coffee Organization. 
+The datasets in question consist of the domestic consumption and domestic exports of coffee for several 
+countries in the Global South between 1990 and 2018.
 
 Data Cleaning Process: 
   * (1) Harmonize country names between datasets & standardize variable names
@@ -191,7 +193,9 @@ Data Cleaning Process:
 
 ## Generate New Variables
 
-In this section, I generate two new variables: Total Production (the sum of a country's coffee exports and its domestic consumption of coffee) and Percentage Exports (the share of coffee exports from total production).
+In this section, I generate two new variables: Total Production (the sum of a country's 
+coffee exports and its domestic consumption of coffee) and Percentage Exports (the share of 
+coffee exports from total production).
 
 ```{r, echo=FALSE}
 # Compute new variables from old
@@ -213,7 +217,12 @@ In this section, I generate two new variables: Total Production (the sum of a co
 
 ## Regression
 
-I employ a difference-in-difference specification strategy to assess the effect of the Rwandan government's 2002 national coffee strategy to boost coffee production by incentivizing investments that shifted production from low-quality to high-quality specialty strains. I utilize Burundi's export and domestic consumption data (which was not subject to a national coffee strategy) as the control group in the specification strategy, given its geographical similarity and proximity to Rwanda. The data follows country-year observations from 1990 to 2018.
+I employ a difference-in-difference specification strategy to assess the effect of the Rwandan 
+government's 2002 national coffee strategy to boost coffee production by incentivizing investments 
+that shifted production from low-quality to high-quality specialty strains. I utilize Burundi's 
+export and domestic consumption data (which was not subject to a national coffee strategy) as the 
+control group in the specification strategy, given its geographical similarity and proximity to 
+Rwanda. The data follows country-year observations from 1990 to 2018.
 
 ```{r, echo=FALSE}
 # Keep only treatment and control countries
@@ -272,10 +281,24 @@ I employ a difference-in-difference specification strategy to assess the effect 
 
 ## Conclusion
 
-According to the diff-in-diff specification, I find that the Rwandan coffee strategy caused a roughly 114,000 coffee bag decrease in total production when using Burundi as a comparison control, with statistical significance at the 10% level. Furthermore, I also find that the Rwandan coffee strategy caused a 0.7% decrease in the share of coffee exports from total production when using Burundi as a comparison control, with statistical significance at the 1% level.
+According to the diff-in-diff specification, I find that the Rwandan coffee strategy caused a roughly 
+114,000 coffee bag decrease in total production when using Burundi as a comparison control, with 
+statistical significance at the 10% level. Furthermore, I also find that the Rwandan coffee strategy 
+caused a 0.7% decrease in the share of coffee exports from total production when using Burundi as a 
+comparison control, with statistical significance at the 1% level.
 
-Visual inspection shows Burundi and Rwanda demonstrate parallel trends before the policy, with significant volatility in coffee production and share of exports. 1994, the year of the Rwandan genocide, proves a remarkable exception for Rwanda, with coffee statistics plummeting near zero. Coffee exports increase after the strategy's implementation, suggesting that most of the corresponding increase in production is absorbed internationally, as was intended by the policy.
+Visual inspection shows Burundi and Rwanda demonstrate parallel trends before the policy, with significant 
+volatility in coffee production and share of exports. 1994, the year of the Rwandan genocide, proves a 
+remarkable exception for Rwanda, with coffee statistics plummeting near zero. Coffee exports increase after 
+the strategy's implementation, suggesting that most of the corresponding increase in production is absorbed 
+internationally, as was intended by the policy.
 
-Moreover, our data visualization reflects two key insights. Firstly, the share of coffee exports from total production became slightly greater and far more consistent for Rwanda following the implementation of the national coffee strategy, particularly when compared to the same metric and time frame for Burundi. Secondly, total coffee production in Rwanda remained similarly volatile post-2002 as it was pre-2002, before plateauing to a more stable level in 2008. Total production levels are roughly similar to Burundi's after 2002, although Burundi's demonstrate consistent volatility throughout the full time frame of the analysis. The policy appears to have stabilized Rwanda's coffee production industry, permitting the development of a growing export sector.  
+Moreover, our data visualization reflects two key insights. Firstly, the share of coffee exports from total 
+production became slightly greater and far more consistent for Rwanda following the implementation of the 
+national coffee strategy, particularly when compared to the same metric and time frame for Burundi. Secondly, 
+total coffee production in Rwanda remained similarly volatile post-2002 as it was pre-2002, before plateauing 
+to a more stable level in 2008. Total production levels are roughly similar to Burundi's after 2002, although 
+Burundi's demonstrate consistent volatility throughout the full time frame of the analysis. The policy appears 
+to have stabilized Rwanda's coffee production industry, permitting the development of a growing export sector.  
 
 
