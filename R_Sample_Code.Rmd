@@ -1,0 +1,281 @@
+---
+title: "London School of Economics Coffee Farmer Project Sample Code"
+output: pdf_document
+date: "2023-09-22"
+---
+
+## Summary
+
+In this sample code, I clean and wrangle two panel datasets from the International Coffee Organization. The datasets in question consist of the domestic consumption and domestic exports of coffee for several countries in the Global South between 1990 and 2018.
+
+Data Cleaning Process: 
+  * (1) Harmonize country names between datasets & standardize variable names
+  * (2) Reshape datasets so each row is country-year
+  * (3) Merge two datasets together for easier analysis 
+  * (4) Run a balance test for merged panel
+
+```{r, echo=FALSE}
+# Load necessary libraries
+  library(dplyr)
+  library(tidyverse)
+  library(gplots)
+  library(ggplot2)
+  library(reshape)
+  library(fastDummies)
+  library(sjmisc)
+  library(stringr)
+
+
+# Set working directory
+  setwd("/Users/ignaciogutierrez/Desktop")
+```
+
+
+## Data Cleaning: Exports Dataset
+
+```{r, echo=FALSE}
+# Import datafile
+  exports_raw = read.csv("exports-coffee.csv")
+
+
+# Homogenize strings and remove excess spacing
+  exports_raw$country <- trimws(exports_raw$country)
+
+
+# Replace variable names with year: (Ex. "X2011 -> yr2011")
+  col_names <- names(exports_raw)
+  for (i in 2:length(col_names)) {
+    col_names[i] <- str_replace_all(col_names[i], "^X", "yr")
+  }
+  names(exports_raw) <- col_names
+
+
+# Correct misspelled strings
+  exports_raw$country[exports_raw$country == "Jamaicaaa"] <- "Jamaica"
+  exports_raw$country[exports_raw$country == "Bolivia (Plurinational State of)"] <- "Bolivia"
+  exports_raw$country[exports_raw$country == "Timor-Leste"] <- "Timor Leste"
+  exports_raw$country[exports_raw$country == "Viet Nam"] <- "Vietnam"
+
+
+# Reshape panel data into long form by country-year; remove "yr" pre-fix from year observations
+  country_exports <- exports_raw %>%
+    pivot_longer(cols = c(yr1990:yr2018), names_to = "year", values_to = "exports")
+
+  country_exports$year <- str_remove_all(country_exports$year, "^yr")
+```
+
+
+## Data Cleaning: Domestic Consumption Dataset
+
+```{r, echo=FALSE}
+# Import datafile
+  consumption_raw = read.csv("domestic-consumption-coffee.csv")
+
+
+# Replace variable names with years
+  col_names <- names(consumption_raw)
+  for (i in 3:length(col_names)) {
+    col_names[i] <- str_replace_all(col_names[i], "^X", "yr")
+  }
+  names(consumption_raw) <- col_names
+
+
+# Homogenizing strings: capitalizing country names
+  consumption_raw$country <- str_to_title(consumption_raw$country)
+
+
+# Check for duplicates and remove them: only 2 of 58 observations are duplicates
+  consumption_raw <- consumption_raw %>%
+    arrange(country) %>%
+    distinct(country, .keep_all = TRUE)
+
+
+# Correct for misspelled strings
+  consumption_raw %>% select(c(country, region))
+  print(consumption_raw)
+  
+  consumption_raw <- consumption_raw %>%
+  mutate(
+    region = ifelse(
+      row_number() %in% c(10, 11, 28),
+      c("Central America", "Carribean", "Carribean"),
+      region
+    )
+  )
+
+
+# Reshape panel data into long form by country-year; remove "yr" pre-fix from year observations
+  country_consumption <- consumption_raw %>%
+    pivot_longer(cols = c(yr1990:yr2018), names_to = "year", values_to = "consumption")
+
+  country_consumption$year <- str_remove_all(country_consumption$year, "^yr")
+```
+
+
+## Merging Datasets: Exports & Domestic Consumption
+
+```{r, echo=FALSE}
+# Merge
+  country_db <- merge(country_exports, country_consumption, by = c("country", "year"))
+  print(country_db)
+  country_db <- country_db %>% relocate(region, .before = year)
+
+
+# Create ID number for each country
+  country_db <- country_db %>%
+    mutate(id = factor(country)) %>%
+    arrange(id)
+
+  country_db$id <- as.numeric(country_db$id)
+  country_db <- country_db %>% relocate(id, .before = country)
+
+
+# Balance Test: We are looking for significant differences in the relevant co-
+# variates across countries. These differences would prevent a comparative 
+# analysis among specific countries with similarities which extend beyond the
+# data captured here, like proximity, geography, historical events, etc. 
+  install.packages("plm")
+  library(plm)
+
+  my_pdata <- pdata.frame(country_db, index = c("id", "year"))
+  is.pbalanced(my_pdata)
+  unbalancedness <- punbalancedness(my_pdata)
+  unbalancedness
+```
+
+
+## Data Visualization
+
+```{r, echo=FALSE}
+# Identify countries in the top quartile of avg. export quantity
+  country_db <- country_db %>%
+  group_by(country) %>%
+  mutate(avg_export = mean(exports))
+
+  quartiles <- quantile(country_db$avg_export, probs = c(0, 0.25, 0.50, 0.75, 1))
+  country_db$quartiles <- cut(country_db$avg_export, breaks = quartiles, labels = c(1, 2, 3, 4))
+
+  table(country_db$country[country_db$quartiles == 4])
+
+  
+# Create new data frame for top quartile countries
+  top_quartile_panel <- country_db %>%
+    mutate(keep = quartiles == 4) %>%
+    filter(keep)
+  print(country_db)
+
+
+# Graph average coffee exports and average consumption in top quartile countries
+    top_quartile_panel <- top_quartile_panel %>%
+    group_by(country) %>%
+    mutate(avg_consumption = mean(consumption))
+    top_quartile_panel <- top_quartile_panel %>% relocate(avg_consumption, .before = quartiles)
+
+    ggplot(top_quartile_panel, aes(x = avg_export, y = country)) +
+    geom_bar(stat = "identity", position = "dodge", fill = "blue", width = 0.3) +
+    labs(title = "Coffee Statistics 1990 - 2018",
+         y = "Country",
+         x = "Average Exports") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+    ggplot(top_quartile_panel, aes(x = avg_consumption, y = country)) +
+    geom_bar(stat = "identity", position = "dodge", fill = "red", width = 0.3) +
+    labs(title = "Coffee Statistics 1990 - 2018",
+         y = "Country",
+         x = "Average Consumption") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+## Generate New Variables
+
+In this section, I generate two new variables: Total Production (the sum of a country's coffee exports and its domestic consumption of coffee) and Percentage Exports (the share of coffee exports from total production).
+
+```{r, echo=FALSE}
+# Compute new variables from old
+  country_db$total_production <- country_db$exports + country_db$consumption
+  country_db$pct_exports <- country_db$exports / country_db$total_production
+
+
+# Round quantities
+  country_db <- country_db %>%
+  mutate(
+    exports = round(exports, 3),
+    avg_export = round(avg_export, 3),
+    total_production = round(total_production, 3),
+    pct_exports = round(pct_exports, 3)
+  )
+  print(country_db)
+```
+
+
+## Regression
+
+I employ a difference-in-difference specification strategy to assess the effect of the Rwandan government's 2002 national coffee strategy to boost coffee production by incentivizing investments that shifted production from low-quality to high-quality specialty strains. I utilize Burundi's export and domestic consumption data (which was not subject to a national coffee strategy) as the control group in the specification strategy, given its geographical similarity and proximity to Rwanda. The data follows country-year observations from 1990 to 2018.
+
+```{r, echo=FALSE}
+# Keep only treatment and control countries
+  diff_in_diff <- country_db[country_db$country %in% c("Rwanda", "Burundi"), ]
+  print(diff_in_diff)
+
+
+# Generate treatment dummy variable
+  diff_in_diff$treat <- 1
+  diff_in_diff$treat[diff_in_diff$country == "Burundi"] <- 0
+
+
+# Generate time dummy for the National Coffee Strategy intervention
+  diff_in_diff$post <- 1
+  diff_in_diff$post[diff_in_diff$year >= 2002] <- 0
+
+
+# Generate diff-in-diff estimator
+  diff_in_diff$treat_post <- diff_in_diff$treat * diff_in_diff$post
+  print(diff_in_diff)
+
+
+# Diff-in-diff estimation
+  lm_total_production <- lm(total_production ~ treat + post + treat_post, data = diff_in_diff)
+  summary(lm_total_production)
+
+  lm_pct_exports <- lm(pct_exports ~ treat + post + treat_post, data = diff_in_diff)
+  summary(lm_pct_exports)
+
+
+# Data visualization of diff-in-diff results
+
+  ## graph for total production (Rwanda vs. Burundi)
+    ggplot(diff_in_diff, aes(x = year, y = total_production)) +
+    geom_line(aes(group = country, color = country), linewidth = 1) +
+    ylab("Total Production") +
+    xlab("Year") +
+    theme(legend.title = element_blank()) +
+    scale_x_discrete(breaks = seq(1990, 2018, by = 4)) +
+    ggtitle("Diff-in-Diff Estimation: Rwanda vs. Burundi") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    geom_vline(xintercept = "2002", linetype = "dotted", linewidth = 1)
+
+  ## graph for % share of exports (Rwanda vs. Burundi)
+    ggplot(diff_in_diff, aes(x = year, y = pct_exports)) +
+    geom_line(aes(group = country, color = country), linewidth = 1) +
+    ylab("% Share of Exports") +
+    xlab("Year") +
+    theme(legend.title = element_blank()) +
+    scale_x_discrete(breaks = seq(1990, 2018, by = 4)) +
+    ggtitle("Diff-in-Diff Estimation: Rwanda vs. Burundi") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    geom_vline(xintercept = "2002", linetype = "dotted", linewidth = 1)
+```
+
+
+## Conclusion
+
+According to the diff-in-diff specification, I find that the Rwandan coffee strategy caused a roughly 114,000 coffee bag decrease in total production when using Burundi as a comparison control, with statistical significance at the 10% level. Furthermore, I also find that the Rwandan coffee strategy caused a 0.7% decrease in the share of coffee exports from total production when using Burundi as a comparison control, with statistical significance at the 1% level.
+
+Visual inspection shows Burundi and Rwanda demonstrate parallel trends before the policy, with significant volatility in coffee production and share of exports. 1994, the year of the Rwandan genocide, proves a remarkable exception for Rwanda, with coffee statistics plummeting near zero. Coffee exports increase after the strategy's implementation, suggesting that most of the corresponding increase in production is absorbed internationally, as was intended by the policy.
+
+Moreover, our data visualization reflects two key insights. Firstly, the share of coffee exports from total production became slightly greater and far more consistent for Rwanda following the implementation of the national coffee strategy, particularly when compared to the same metric and time frame for Burundi. Secondly, total coffee production in Rwanda remained similarly volatile post-2002 as it was pre-2002, before plateauing to a more stable level in 2008. Total production levels are roughly similar to Burundi's after 2002, although Burundi's demonstrate consistent volatility throughout the full time frame of the analysis. The policy appears to have stabilized Rwanda's coffee production industry, permitting the development of a growing export sector.  
+
+
